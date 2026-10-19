@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#00a8e8" />
+  <meta name="description" content="Daniel Print Hub – Print, scan documents, and read QR/barcodes. Wi-Fi, Email Print & cloud." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Daniel Print Hub" />
+  <title>Daniel Print Hub – Print · Scan · QR</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- QR / Barcode scanner library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 9V2h12v7" />
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <path d="M6 14h12v8H6z" />
+        </svg>
+        <div>
+          <h1>Daniel Print Hub</h1>
+          <p class="tagline">Print · Scan · QR / Barcode</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn-install hidden" id="installBtn" onclick="installPWA()">Install App</button>
+        <div class="status-pill" id="connectionStatus">
+          <span class="dot"></span>
+          <span>Ready</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top section tabs -->
+    <nav class="section-tabs" id="sectionTabs">
+      <button class="section-tab active" data-section="print">🖨️ Print</button>
+      <button class="section-tab" data-section="scan">📷 Scan Doc</button>
+      <button class="section-tab" data-section="qr">📱 QR / Barcode</button>
+    </nav>
+
+    <main class="main">
+      <!-- ========== PRINT SECTION ========== -->
+      <div id="sectionPrint" class="section-panel">
+        <section class="card mode-card">
+          <h2>Print Mode</h2>
+          <div class="mode-tabs">
+            <button class="tab active" data-mode="local">
+              <span class="tab-icon">📶</span> Local Wi-Fi
+            </button>
+            <button class="tab" data-mode="email">
+              <span class="tab-icon">✉️</span> Email Print
+            </button>
+            <button class="tab" data-mode="api">
+              <span class="tab-icon">☁️</span> Epson Connect API
+            </button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>1. Select File</h2>
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,image/*" hidden />
+            <div class="dropzone-content">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <p>Drag & drop or <button type="button" class="link-btn" id="browseBtn">browse</button></p>
+              <p class="hint">PDF, images, Office docs, text</p>
+            </div>
+          </div>
+          <div class="file-preview hidden" id="filePreview">
+            <div class="file-info">
+              <span class="file-icon">📄</span>
+              <div>
+                <strong id="fileName">document.pdf</strong>
+                <span id="fileSize">0 KB</span>
+              </div>
+            </div>
+            <button type="button" class="btn-icon" id="removeFile">✕</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>2. Print Settings</h2>
+          <div class="settings-grid">
+            <label>Paper size
+              <select id="paperSize">
+                <option value="ps_a4">A4</option>
+                <option value="ps_letter">Letter</option>
+                <option value="ps_legal">Legal</option>
+                <option value="ps_a3">A3</option>
+                <option value="ps_photo">Photo 4×6</option>
+              </select>
+            </label>
+            <label>Color mode
+              <select id="colorMode">
+                <option value="color">Color</option>
+                <option value="mono">Black &amp; White</option>
+              </select>
+            </label>
+            <label>Quality
+              <select id="quality">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="draft">Draft</option>
+              </select>
+            </label>
+            <label>Copies
+              <input type="number" id="copies" min="1" max="99" value="1" />
+            </label>
+            <label class="checkbox-label"><input type="checkbox" id="duplex" /> Double-sided</label>
+            <label class="checkbox-label"><input type="checkbox" id="borderless" /> Borderless</label>
+          </div>
+        </section>
+
+        <section class="card mode-panel" id="panelLocal">
+          <h2>3. Local Wi-Fi Print</h2>
+          <p class="help">Opens the system print dialog (AirPrint, Mopria, or Epson driver).</p>
+          <div class="actions">
+            <button class="btn primary" id="btnLocalPrint" disabled>Print via System Dialog</button>
+          </div>
+        </section>
+
+        <section class="card mode-panel hidden" id="panelEmail">
+          <h2>3. Email Print (Epson Connect)</h2>
+          <p class="help">Send to your printer’s Epson Connect email from anywhere.</p>
+          <label>Printer Email Address
+            <input type="email" id="printerEmail" placeholder="yourprinter@print.epsonconnect.com" />
+          </label>
+          <div class="actions">
+            <button class="btn primary" id="btnEmailPrint" disabled>Send via Email Print</button>
+            <button class="btn secondary" id="btnCopyEmail">Copy Email</button>
+          </div>
+        </section>
+
+        <section class="card mode-panel hidden" id="panelApi">
+          <h2>3. Epson Connect API</h2>
+          <p class="help">Developer mode – needs credentials from developer.epsonconnect.com</p>
+          <div class="api-config">
+            <label>Client ID <input type="text" id="clientId" autocomplete="off" /></label>
+            <label>Client Secret <input type="password" id="clientSecret" autocomplete="off" /></label>
+            <label>API Key <input type="text" id="apiKey" autocomplete="off" /></label>
+            <label>Device ID / Email <input type="text" id="deviceId" /></label>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="btnApiPrint" disabled>Create Job &amp; Print</button>
+            <button class="btn secondary" id="btnSaveConfig">Save Config</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- ========== DOCUMENT SCAN SECTION ========== -->
+      <div id="sectionScan" class="section-panel hidden">
+        <section class="card">
+          <h2>Document Scanner</h2>
+          <p class="help">Use your phone camera to scan documents, then print them.</p>
+
+          <div class="scan-stage" id="scanStage">
+            <video id="scanVideo" playsinline autoplay muted class="hidden"></video>
+            <canvas id="scanCanvas" class="hidden"></canvas>
+            <div class="scan-placeholder" id="scanPlaceholder">
+              <div class="scan-icon">📄</div>
+              <p>Point camera at a document</p>
+            </div>
+          </div>
+
+          <div class="scan-thumbs" id="scanThumbs"></div>
+
+          <div class="actions scan-actions">
+            <button class="btn primary" id="btnStartScan">Start Camera</button>
+            <button class="btn secondary hidden" id="btnCapture">Capture Page</button>
+            <button class="btn secondary hidden" id="btnStopScan">Stop Camera</button>
+            <button class="btn primary hidden" id="btnPrintScans" disabled>Print Scanned Pages</button>
+            <button class="btn secondary hidden" id="btnClearScans">Clear All</button>
+          </div>
+
+          <div class="info-box">
+            <strong>Tip:</strong> Place the document on a flat surface with good light. Capture each page, then print all pages at once.
+          </div>
+        </section>
+      </div>
+
+      <!-- ========== QR / BARCODE SECTION ========== -->
+      <div id="sectionQr" class="section-panel hidden">
+        <section class="card">
+          <h2>QR &amp; Barcode Reader</h2>
+          <p class="help">Scan QR codes and barcodes with your camera. Supports QR, EAN, UPC, Code 128, and more.</p>
+
+          <div id="qrReader" class="qr-reader"></div>
+
+          <div class="actions">
+            <button class="btn primary" id="btnStartQr">Start Scanner</button>
+            <button class="btn secondary hidden" id="btnStopQr">Stop Scanner</button>
+          </div>
+
+          <div class="qr-result hidden" id="qrResult">
+            <h3>Scanned result</h3>
+            <div class="qr-type" id="qrType">QR Code</div>
+            <pre id="qrText"></pre>
+            <div class="actions">
+              <button class="btn secondary" id="btnCopyQr">Copy Text</button>
+              <button class="btn primary" id="btnPrintQr">Print Result</button>
+              <a class="btn secondary hidden" id="btnOpenQr" target="_blank" rel="noopener">Open Link</a>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <strong>Tip:</strong> Hold steady and ensure the code is well lit. The scanner works offline once the page is loaded.
+          </div>
+        </section>
+      </div>
+
+      <!-- Activity log (shared) -->
+      <section class="card">
+        <h2>Activity Log</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Daniel Print Hub · Print · Scan · QR · Unofficial helper app</p>
+    </footer>
+  </div>
+
+
+  <!-- ========== PAGE EDITOR OVERLAY ========== -->
+  <div id="pageEditor" class="page-editor hidden">
+    <div class="editor-top">
+      <button type="button" class="editor-btn" id="editorCancel">Cancel</button>
+      <span class="editor-title">Edit page</span>
+      <button type="button" class="editor-btn primary" id="editorDone">Done</button>
+    </div>
+    <div class="editor-canvas-wrap">
+      <div class="editor-stage" id="editorStage">
+        <canvas id="editorCanvas"></canvas>
+        <div id="balloonLayer" class="balloon-layer"></div>
+      </div>
+    </div>
+    <div class="editor-colors">
+      <button type="button" class="color-swatch active" data-color="#000000" style="background:#000"></button>
+      <button type="button" class="color-swatch" data-color="#ffffff" style="background:#fff;border:1px solid #ccc"></button>
+      <button type="button" class="color-swatch" data-color="#ef5350" style="background:#ef5350"></button>
+      <button type="button" class="color-swatch" data-color="#ff9800" style="background:#ff9800"></button>
+      <button type="button" class="color-swatch" data-color="#ffeb3b" style="background:#ffeb3b"></button>
+      <button type="button" class="color-swatch" data-color="#4caf50" style="background:#4caf50"></button>
+      <button type="button" class="color-swatch" data-color="#00bcd4" style="background:#00bcd4"></button>
+      <button type="button" class="color-swatch" data-color="#2196f3" style="background:#2196f3"></button>
+      <button type="button" class="color-swatch" data-color="#9c27b0" style="background:#9c27b0"></button>
+      <button type="button" class="color-swatch" data-color="#e91e63" style="background:#e91e63"></button>
+    </div>
+    <div class="editor-size">
+      <label>Size <input type="range" id="brushSize" min="2" max="40" value="6" /></label>
+      <label class="font-label">Font
+        <select id="fontSelect">
+          <option value="system-ui, sans-serif">System</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="'Times New Roman', Times, serif">Times</option>
+          <option value="Arial, Helvetica, sans-serif">Arial</option>
+          <option value="'Courier New', Courier, monospace">Courier</option>
+          <option value="Verdana, sans-serif">Verdana</option>
+          <option value="'Comic Sans MS', 'Comic Sans', cursive">Comic</option>
+          <option value="Impact, Haettenschweiler, sans-serif">Impact</option>
+          <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+          <option value="'Palatino Linotype', Palatino, serif">Palatino</option>
+        </select>
+      </label>
+      <label class="color-picker-label">Color
+        <input type="color" id="colorPicker" value="#000000" />
+      </label>
+      <label class="font-label">Rotate
+        <input type="range" id="textRotation" min="0" max="360" value="0" />
+        <span id="textRotationVal">0°</span>
+      </label>
+    </div>
+    <div class="editor-message-bar" id="messageBar">
+      <input type="text" id="customMessageInput" placeholder="Type your message here…" maxlength="200" />
+      <button type="button" class="editor-btn-add" id="btnAddMessage">Add</button>
+    </div>
+    <div class="editor-balloon-styles" id="balloonStyles">
+      <span class="style-label">Balloon:</span>
+      <button type="button" class="style-btn active" data-style="speech" title="Speech">💬 Speech</button>
+      <button type="button" class="style-btn" data-style="thought" title="Thought">💭 Thought</button>
+      <button type="button" class="style-btn" data-style="shout" title="Shout">💥 Shout</button>
+      <button type="button" class="style-btn" data-style="whisper" title="Whisper">💭 Whisper</button>
+      <button type="button" class="style-btn" data-style="rect" title="Box">▭ Box</button>
+    </div>
+    <div class="editor-tools" id="editorTools">
+      <button type="button" class="tool-btn active" data-tool="draw" title="Draw">✏️ Draw</button>
+      <button type="button" class="tool-btn" data-tool="highlight" title="Highlight">🖍 Highlight</button>
+      <button type="button" class="tool-btn" data-tool="eraser" title="Eraser">🧽 Eraser</button>
+      <button type="button" class="tool-btn" data-tool="line" title="Line">／ Line</button>
+      <button type="button" class="tool-btn" data-tool="arrow" title="Arrow">→ Arrow</button>
+      <button type="button" class="tool-btn" data-tool="box" title="Box">□ Box</button>
+      <button type="button" class="tool-btn" data-tool="circle" title="Circle">○ Circle</button>
+      <button type="button" class="tool-btn" data-tool="text" title="Text">T Text</button>
+      <button type="button" class="tool-btn" data-tool="balloon" title="Word balloon">💬 Balloon</button>
+      <button type="button" class="tool-btn" data-tool="crop" title="Crop">✂ Crop</button>
+      <button type="button" class="tool-btn" data-action="autoCrop" title="Auto crop edges">⬚ Auto Crop</button>
+      <button type="button" class="tool-btn" data-action="rotate" title="Rotate">⟳ Rotate</button>
+      <button type="button" class="tool-btn" data-action="filter" title="Filter">🎨 Filter</button>
+      <button type="button" class="tool-btn" data-action="undo" title="Undo">↶ Undo</button>
+      <button type="button" class="tool-btn" data-action="redo" title="Redo">↷ Redo</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('installBtn');
+      if (btn) btn.classList.remove('hidden');
+    });
+    function installPWA() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+    }
+  </script>
+</body>
+</html>
